@@ -45,88 +45,450 @@
  *
  */
 
-#include "nlp.hpp"
+ #include "nlp.hpp"
+ #include <regex>
 
-SPOTriplets NLP::sentence2triplets ( const char* sentence )
-{
+ // #define DEBUG
 
-  SPOTriplets triplets;
+ SPOTriplets NLP::sentence2triplets ( const char* sentence )
+ {
+   // vector of triplets
+   SPOTriplets triplets;
 
-  Sentence sent = sentence_create ( sentence, dict_ );
-  sentence_split ( sent, parse_opts_ );
-  int num_linkages = sentence_parse ( sent, parse_opts_ );
+   #ifdef DEBUG
+     std::cout << "The sentence: " << sentence << std::endl;
+   #endif
+   // creates a Sentence from the input char*
+   Sentence sent = sentence_create ( sentence, dict_ );
+   #ifdef DEBUG
+     std::cout << "Sentence created" << std::endl;
+   #endif
+   // tokenizes the sentence
+   sentence_split ( sent, parse_opts_ );
+   #ifdef DEBUG
+     std::cout << "Sentence splitted" << std::endl;
+   #endif
+   // searches for all possible linkages
+   int num_linkages = sentence_parse ( sent, parse_opts_ );
+   #ifdef DEBUG
+     std::cout << "Sentence parsed" << std::endl;
+     std::cout << "Number of linkages: " << num_linkages << std::endl;
+   #endif
 
-  SPOTriplet triplet;
-  std::string alter_p;
+   // just one triplet
+   SPOTriplet triplet;
 
-  bool ready = false;
+   // if there is any linkage in the sentence
+   if( num_linkages > 0 )
+   {
+     // create the linkage
+     Linkage linkage = linkage_create ( 0, sent, parse_opts_ );
 
-  for ( int l {0}; l< num_linkages && !ready; ++l )
-    {
+     #ifdef DEBUG
+       // prints the sentence's diagram
+       std::cout << "The diagram: " << std::endl;
+       char *diagram = linkage_print_diagram(linkage, true, 800);
+       std::cout << diagram << std::endl;
+       linkage_free_diagram( diagram );
+       // end print diagram
+     #endif
 
-      Linkage linkage = linkage_create ( l, sent, parse_opts_ );
+     std::vector<std::string> labels;
 
-      std::vector<std::string> words;
+     // 1. find the S_link
+     // S* except there is an SJ* because then S* except Spx
+     // two cases: there is SJ* and there is not SJ*
 
-      for ( int k=0; k<linkage_get_num_links ( linkage ); ++k )
-        {
+     // TODO: VJlp VJrp same as SJ but to predications
+     // TODO: SFut SFst what the fuck?                                     ###FIXED###
+     // TODO: His form was shining like the light not working              ###FIXED###
+     // TODO: Car is mine not working                                      ###FIXED###
+     // TODO: The little brown bear has eaten all of the honey not working ###FIXED###
 
-          const char *p = linkage_get_word ( linkage, k );
-          if ( p )
-            words.push_back ( p );
-          else
-            words.push_back ( "null" );
+     // REGEXES
+     std::regex SJ_( "SJ.*" );
+     std::regex VJ_( "VJ.*");
+     std::regex subject( "(Ss.*)|(SFut)|(Sp\*.*)" );
+     std::regex Spx( "Spx.*" );
+     // TODO:fix theese initializer list not allowed                       ###FIXED###
+     std::regex predicate( "(Pv.*)|(Pg.*)|(PP.*)|(I.*)|(TO)|(MVi.*)" );
+     // TODO: make one from theese // (Sp.*)|(Ss.*)                        ###FIXED###
+     std::regex noun_adject_object ( "(O.*)|(Os.*)|(Op.*)|(MVpn.*)|(Pa.*)|(MVa.*)" );
+     std::regex preposition ( "(MVp.*)|(Pp.*)|(OF)|(TO)" );
+     std::regex prep_object ( "(J.*)|(TI)|(I.*)|(ON)" );
+     // TODO: problems with matching!! Pg*!!                               ###FIXED###
+     // TODO: problems with matching!! Mvp.*!!                             ###FIXED###
 
-        }
+     bool s_found = false;
+     bool p_found = false;
+     bool o_found = false;
+     bool SJ = false;
 
-      for ( int k {0}; k<linkage_get_num_links ( linkage ) && !ready; ++k )
-        {
+     // search for SJ.s labels
+     for( auto label: labels )
+     {
+       if( std::regex_match( label, SJ_ ) )
+       {
+         SJ = true;
+         break;
+       }
+     }
 
-          const char* c = linkage_get_link_label ( linkage, k );
+     // multiple subject in the sentence
+     if( SJ )
+     {
+       // SPls left -> first subject
+       // SPrs right -> second subject
+       // Spx right -> predicate
+       // SJ-s are multiple subjects
+       std::string temp;
+       // go through every linkage
+       for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+       {
+         // get their label
+         std::string l = linkage_get_link_label( linkage, i );
+         // if there is an SJl* label
+         if( std::regex_match( l, std::regex( "SJl.*" ) ) )
+         {
+           // SJls left side
+           triplet.s = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+           triplet.cut( triplet.s );
+           temp = triplet.s + " ";
+           // and word
+           triplet.s = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+           triplet.cut( triplet.s );
+           temp += triplet.s + " ";
 
-          if ( *c == 'S' && linkage_get_word ( linkage, k ) )
-            {
-	      
-              triplet.p = linkage_get_word ( linkage, k );
-              alter_p = words[linkage_get_link_rword ( linkage, k )];
-              triplet.s = words[linkage_get_link_lword ( linkage, k )];
+           // find SJr*
+           for( int j = 0; j < linkage_get_num_links( linkage ); ++j )
+           {
+             std::string m = linkage_get_link_label( linkage, j );
+             if( std::regex_match( m, std::regex( "SJr.*" ) ) )
+             {
+               triplet.s = linkage_get_word( linkage, linkage_get_link_rword( linkage, j ) );
+               triplet.cut();
+               temp += triplet.s;
+               triplet.s = temp;
 
-            }
+               s_found = true;
+               #ifdef DEBUG
+                 std::cout << "Subject found: " << triplet.s << std::endl;
+               #endif
+               break;
+             } // if
+           } // for
+           break;
+         } // if
+       } // for
 
-          if ( *c == 'O' )
-            {
+       // now we have the subject
 
-              triplet.o = words[linkage_get_link_rword ( linkage, k )];
+       // find Spx and its right side will be the starter predicate
+       std::string current_word;
+       for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+       {
+         std::string l = linkage_get_link_label( linkage, i );
+         if( std::regex_match( l, std::regex( "Spx.*" ) ) )
+         {
+           triplet.p = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+           current_word = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+         }
+       }
+       // from now all the same as on the else branch !!!!
 
-              if ( triplet.p == words[linkage_get_link_lword ( linkage, k )] )
-                {
+       bool predicate_match = false;
 
-                  triplet.cut ( );
+       // search for the linkage that has triplet.s as left!
+       do
+       {
+         predicate_match = false;
 
-                  triplets.push_back ( triplet );
+         for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+         {
+           // every linkage's left word
+           std::string word_i = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+           // every linkage's label
+           std::string l = linkage_get_link_label( linkage, i );
 
-                  ready = true;
-                  break;
-                }
-              else if ( alter_p == words[linkage_get_link_lword ( linkage, k )] )
-                {
-                  triplet.p = alter_p;
+           if( std::regex_match( l, predicate ) && word_i == current_word )
+           {
+             // found predicate
+             triplet.p = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+             current_word = triplet.p;
+             predicate_match = true;
+             break;
+           }
+         }
+       }
+       while( predicate_match );
 
-                  triplet.cut ( );
+       // we now have the predicate too
+       // TODO: multiple predicates!
+       p_found = true;
+       #ifdef DEBUG
+         std::cout << "Predicate found: " << triplet.p << std::endl;
+       #endif
 
-                  triplets.push_back ( triplet );
+       // ###COPY BEGIN###
 
-                  ready = true;
-                  break;
+       // search for noun object or adjective object
+       for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+       {
+         // get every linkage label
+         std::string l = linkage_get_link_label( linkage, i );
+         // get the left word of every linkage
+         std::string l_word = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+         // if thete is a label that match AND its left word is the predicate
+         if( std::regex_match( l, noun_adject_object ) && triplet.p == l_word )
+         {
+           // then the object is that linkage's right word
+           triplet.o = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+           triplet.cut( triplet.o );
+           o_found = true;
+           #ifdef DEBUG
+             std::cout << "Adjective or noun object found: " << triplet.o << std::endl;
+           #endif
+         } // if
+       } // for
 
-                }
-            }
-        }
+       // still not found object, then search for preposition
+       if( !o_found )
+       {
+         // go through every linkage
+         for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+         {
+           // get the linkage's label
+           std::string l = linkage_get_link_label( linkage, i );
+           // and left word
+           std::string word_i = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+           // if there is a linkage which is a preposition and its left word is the predicate
+           if( std::regex_match( l, preposition ) && triplet.p == word_i )
+           {
+             // found preposition
+             // search for prep_object
+             // then the temp will contain the preposition label's right word
+             std::string temp = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+             #ifdef DEBUG
+               std::cout << "Preposition found! and its rigth word is: " << temp << std::endl;
+             #endif
 
-      linkage_delete ( linkage );
-    }
+             for( int j = 0; j < linkage_get_num_links( linkage ); ++j )
+             {
+               // every linkages
+               std::string m = linkage_get_link_label( linkage, j );
+               // every left word
+               std::string word_j = linkage_get_word( linkage, linkage_get_link_lword( linkage, j ) );
 
-  sentence_delete ( sent );
+               // if there is a label with match and its left is exactly the preposition's right
+               if( std::regex_match( m, prep_object ) && temp == word_j )
+               {
+                 triplet.o = linkage_get_word( linkage, linkage_get_link_lword( linkage, j ) );
+                 triplet.cut(triplet.o);
 
-  return triplets;
-}
+                 triplet.o += " ";
+                 // save o
+                 std::string temp = triplet.o;
+
+                 triplet.o = linkage_get_word( linkage, linkage_get_link_rword( linkage, j ) );
+                 triplet.cut(triplet.o);
+                 temp += triplet.o;
+
+                 triplet.o = temp;
+                 o_found = true;
+                 #ifdef DEBUG
+                   std::cout << "Object found: " << triplet.o << std::endl;
+                 #endif
+               } // if( std::regex_match( m, prep_object ) && temp == word_j ) END
+             } // for J END
+           } // if( std::regex_match( l, preposition ) && triplet.p == word_i ) END
+         } // for I END
+       } // if( !o_found ) END
+
+       if( s_found && p_found && o_found )
+       {
+         // TODO: cut the words itself not the whole triplet
+         // have to cut every word itself
+         // triplet.cut();
+         triplet.cut(triplet.s);
+         triplet.cut(triplet.p);
+         triplets.push_back( triplet );
+         s_found = false;
+         p_found = false;
+         o_found = false;
+       }
+       // ###COPY END###
+     }
+     else // only one subject
+     {
+       // except Spx!!!
+       // S left -> subject
+       // S right -> predicate at first
+       // if the word next to S right, is an element of Pv*, Pg* PP*, I*, TO, MVi*
+       // then the new predicate will be that word
+
+       std::string current_word;
+
+       // search for subject (S_link)
+       for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+       {
+         // get the linkage's label
+         std::string l = linkage_get_link_label( linkage, i );
+
+         if( std::regex_match( l, subject ) )
+         {
+           // subject found
+           triplet.s = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+           s_found = true;
+           current_word = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+           triplet.p = current_word;
+           #ifdef DEBUG
+             std::cout << "Subject found: " << triplet.s << std::endl;
+           #endif
+           break;
+         }
+       }
+
+       if( s_found )
+       {
+         bool predicate_match = false;
+
+         // search for the linkage that has triplet.s as left!
+         do
+         {
+           predicate_match = false;
+
+           for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+           {
+             // every linkage's left word
+             std::string l_word = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+             // every linkage's label
+             std::string l = linkage_get_link_label( linkage, i );
+
+             if( std::regex_match( l, predicate ) && l_word == current_word )
+             {
+               // found predicate
+               triplet.p = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+               current_word = triplet.p;
+               predicate_match = true;
+               break;
+             }
+           } // for END
+         } while( predicate_match );
+
+         p_found = true;
+         #ifdef DEBUG
+           std::cout << "Predicate found: " << triplet.p << std::endl;
+         #endif
+       } // if( s_found ) END
+
+       // subject and predicate found
+       // search for object
+
+       // from k to linkage_get_num_links( linkage )
+       // if there is any of the noun, adjective od preposition object then that
+       // label's right will give the object.
+
+       // !!! search only between labels that has triplet.p as left word !!!!!
+
+       // search for noun object or adjective objects
+       // go through all links
+       for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+       {
+         // get every linkage label
+         std::string l = linkage_get_link_label( linkage, i );
+         // get the left word of every linkage
+         std::string word_i = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+         // if thete is a label that match AND its left word is the predicate
+         if( std::regex_match( l, noun_adject_object ) && triplet.p == word_i )
+         {
+           // then the object is that linkage's right word
+           triplet.o = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+           o_found = true;
+           triplet.cut(triplet.o);
+           #ifdef DEBUG
+             std::cout << "Adjective or noun object found: " << triplet.o << std::endl;
+           #endif
+         } // if END
+       } // for END
+
+       // still not found object, then search for preposition
+       if( !o_found )
+       {
+         // go through every linkage
+         for( int i = 0; i < linkage_get_num_links( linkage ); ++i )
+         {
+           // get the linkage's label
+           std::string l = linkage_get_link_label( linkage, i );
+           // and left word
+           std::string word_i = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+
+           // if there is a linkage which is a preposition and its left word is the predicate
+           if( std::regex_match( l, preposition ) && triplet.p == word_i )
+           {
+             // found preposition
+             // search for prep_object
+             // then the temp will contain the preposition label's right word
+             std::string temp = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+             #ifdef DEBUG
+               std::cout << "Preposition found! and its rigth word is: " << temp << std::endl;
+             #endif
+
+             // start search from there
+             for( int j = 0; j < linkage_get_num_links( linkage ); ++j )
+             {
+               // every linkages
+               std::string m = linkage_get_link_label( linkage, j );
+               // every left word
+               std::string word_j = linkage_get_word( linkage, linkage_get_link_lword( linkage, j ) );
+               #ifdef DEBUG
+                 if( std::regex_match( m, prep_object ) )
+                     std::cout << m << " DOES match to (J.*)|(TI)|(I.*)|(ON)" << std::endl;
+               #endif
+
+               // if there is a label with match and its left is exactly the preposition's right
+               if( std::regex_match( m, prep_object ) && temp == word_j )
+               {
+                 triplet.o = linkage_get_word( linkage, linkage_get_link_lword( linkage, j ) );
+                 triplet.cut(triplet.o);
+
+                 triplet.o += " ";
+                 // save o
+                 std::string temp = triplet.o;
+
+                 triplet.o = linkage_get_word( linkage, linkage_get_link_rword( linkage, j ) );
+                 triplet.cut(triplet.o);
+                 temp += triplet.o;
+
+                 triplet.o = temp;
+                 #ifdef DEBUG
+                   std::cout << "Object found: " << triplet.o << std::endl;
+                 #endif
+                 o_found = true;
+               }
+             } // for
+           } // if
+         } // for
+       } // if( o_found ) END
+
+       if( s_found && p_found && o_found )
+       {
+         // TODO: cut the words itself not the whole triplet ###FIXED###
+         // have to cut every word itself
+         // triplet.cut();
+
+         triplet.cut(triplet.s);
+         triplet.cut(triplet.p);
+         triplets.push_back( triplet );
+         s_found = false;
+         p_found = false;
+         o_found = false;
+       }
+
+     } // end else
+
+     linkage_delete ( linkage );
+   } // if( num_linkages > 0 ) END
+
+   sentence_delete ( sent );
+   return triplets;
+ }
