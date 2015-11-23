@@ -94,6 +94,11 @@
      #endif
 
      std::vector<std::string> labels;
+     
+     // label-ek kinyerése
+     for(int i = 0; i < linkage_get_num_links(linkage); i++ ) {
+       labels.push_back(linkage_get_link_label(linkage,i));
+     }
 
      // 1. find the S_link
      // S* except there is an SJ* because then S* except Spx
@@ -151,13 +156,13 @@
          if( std::regex_match( l, std::regex( "SJl.*" ) ) )
          {
            // SJls left side
-           triplet.s = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
-           triplet.cut( triplet.s );
-           temp = triplet.s + " ";
+           triplet.o = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
+           triplet.cut( triplet.o );
+           temp = triplet.o + " ";
            // and word
-           triplet.s = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
-           triplet.cut( triplet.s );
-           temp += triplet.s + " ";
+           triplet.o = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
+           triplet.cut( triplet.o );
+           temp += triplet.o + " ";
 
            // find SJr*
            for( int j = 0; j < linkage_get_num_links( linkage ); ++j )
@@ -165,14 +170,14 @@
              std::string m = linkage_get_link_label( linkage, j );
              if( std::regex_match( m, std::regex( "SJr.*" ) ) )
              {
-               triplet.s = linkage_get_word( linkage, linkage_get_link_rword( linkage, j ) );
+               triplet.o = linkage_get_word( linkage, linkage_get_link_rword( linkage, j ) );
                triplet.cut();
-               temp += triplet.s;
-               triplet.s = temp;
+               temp += triplet.o;
+               triplet.o = temp;
 
-               s_found = true;
+               o_found = true;
                #ifdef DEBUG
-                 std::cout << "Subject found: " << triplet.s << std::endl;
+                 std::cout << "Object found: " << triplet.o << std::endl;
                #endif
                break;
              } // if
@@ -239,7 +244,7 @@
          // get the left word of every linkage
          std::string l_word = linkage_get_word( linkage, linkage_get_link_lword( linkage, i ) );
          // if thete is a label that match AND its left word is the predicate
-         if( std::regex_match( l, noun_adject_object ) && triplet.p == l_word )
+         if( std::regex_match( l, noun_adject_object ) && triplet.p == l_word && !o_found )
          {
            // then the object is that linkage's right word
            triplet.o = linkage_get_word( linkage, linkage_get_link_rword( linkage, i ) );
@@ -303,6 +308,27 @@
            } // if( std::regex_match( l, preposition ) && triplet.p == word_i ) END
          } // for I END
        } // if( !o_found ) END
+       
+       // subject keresése
+       if(!s_found){
+	
+	for(int i=0; i<linkage_get_num_links(linkage); i++){
+	    
+	  std::string l = linkage_get_link_label(linkage, i);
+	  
+	  if(std::regex_match(l, Spx)){
+	      
+	    triplet.s = linkage_get_word(linkage, linkage_get_link_lword(linkage, i));
+	    triplet.cut(triplet.s);
+	    
+	    s_found = true;
+	    break;
+	    
+	  }
+	  
+	}
+	 
+       }
 
        if( s_found && p_found && o_found )
        {
