@@ -120,7 +120,7 @@
      // REGEXES
      std::regex SJ_( "SJ.*" );
      std::regex VJ_( "VJ.*");
-     std::regex subject( "(Ss.*)|(SFut)|(Sp\*.*)" );
+     std::regex subject( "(S.*)|(Ss.*)|(SFut)|(Sp\*.*)" );
      std::regex Spx( "Spx.*" );
      // TODO:fix theese initializer list not allowed                       ###FIXED###
      std::regex predicate( "(Pv.*)|(Pg.*)|(PP.*)|(I.*)|(TO)|(MVi.*)" );
@@ -323,7 +323,7 @@
 	    
 	  std::string l = linkage_get_link_label(linkage, i);
 	  
-	  if(std::regex_match(l, Spx)){
+	  if(std::regex_match(l, subject)){
 	      
 	    triplet.s = linkage_get_word(linkage, linkage_get_link_lword(linkage, i));
 	    triplet.cut(triplet.s);
