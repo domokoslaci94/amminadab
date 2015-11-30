@@ -79,6 +79,8 @@
 #include <cctype>
 #include <cmath>
 
+#include <regex>
+  
 class Samu
 {
 public:
@@ -167,8 +169,14 @@ public:
 
   }
 
+   
   void sentence ( int id, std::string & sentence )
   {
+    if(std::regex_match( sentence, std::regex( " *" )) )
+    {
+      throw "Empty string.";
+    }
+    
     if ( msg_mutex.try_lock() )
       {
 
@@ -301,7 +309,7 @@ public:
   }
 
 private:
-
+ 
   class VisualImagery
   {
 
