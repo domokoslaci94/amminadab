@@ -70,6 +70,13 @@
    #endif
    // searches for all possible linkages
    int num_linkages = sentence_parse ( sent, parse_opts_ );
+   
+   if(num_linkages == 0)
+   {
+     parse_options_set_min_null_count(parse_opts_, 1);
+     num_linkages = sentence_parse ( sent, parse_opts_ );
+   }
+   
    #ifdef DEBUG
      std::cout << "Sentence parsed" << std::endl;
      std::cout << "Number of linkages: " << num_linkages << std::endl;
