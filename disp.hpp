@@ -224,6 +224,14 @@ public:
                 shell ( buf );
               }
           }
+          else if( buf[0] == 'h' && buf[1] == 't' && buf[2] == 't' && buf[3] == 'p')
+	  {
+	    if ( buf.length() < 78 )
+                  {
+                    buf += ch;
+                    shell ( buf );
+                  }
+	  }
         else
           {
             if ( isalnum ( ch ) || isspace ( ch ) )

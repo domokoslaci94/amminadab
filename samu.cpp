@@ -56,6 +56,8 @@
 
 #include <ncurses.h>
 
+#include <regex>
+
 std::string Samu::name {"Amminadab"};
 
 #ifdef DISP_CURSES
@@ -139,6 +141,10 @@ void Samu::FamilyCaregiverShell ( void )
               else
                 NextCaregiver();
             }
+            else if(std::regex_match(line, std::regex("http.*")))
+	    {
+	      
+	    }
           else
             {
               try
