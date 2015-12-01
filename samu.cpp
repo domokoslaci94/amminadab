@@ -57,11 +57,53 @@
 #include <ncurses.h>
 
 #include <regex>
+#include <string>
+#include <curl/curl.h>
+#include <vector>
+#include <string>
 
 std::string Samu::name {"Amminadab"};
 
 #ifdef DISP_CURSES
 Disp Samu::disp;
+
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+void Samu::splitText(std::string text)
+{
+  size_t pos = 0;
+  std::string token;
+  while ((pos = text.find('\n')) != std::string::npos) {
+      token = text.substr(0, pos + 1);
+      internet_sentences.push_back(token);
+      text.erase(0, pos + 1);
+  }
+}
+
+void Samu::parseURL ( std::string url )
+{
+  disp.log(url);
+  
+  CURL *curl;
+  CURLcode res;
+  std::string readBuffer;
+
+  curl = curl_easy_init();
+  if(curl) {
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+  }
+  
+  splitText(readBuffer);
+  
+}
 
 void Samu::FamilyCaregiverShell ( void )
 {
@@ -78,43 +120,57 @@ void Samu::FamilyCaregiverShell ( void )
   int prev_sec {0};
   for ( ; run_ ; )
     {
+      
+      if(is_surfing){
+	    sentence( -1, internet_sentences[internet_row] );
+	    internet_row++;
+	  }
 
       try
         {
 
           disp.cg_read();
 
-          if ( ++sleep > sleep_after_ )
-            {
-              if ( !sleep_ )
-                {
-                  std::cerr << "Isaac went to sleep." << std::endl;
-                  disp.log ( "I went to sleep." );
-                }
-              sleep_ = true;
-            }
-          else
-            {
-              std::cerr << sleep << " " << std::flush;
+	  if(!is_surfing){
+	    if ( ++sleep > sleep_after_ )
+	      {
+		if ( !sleep_ )
+		  {
+		    std::cerr << "Isaac went to sleep." << std::endl;
+		    disp.log ( "I went to sleep." );
+		  }
+		sleep_ = true;
+	      }
+	    else
+	      {
+		std::cerr << sleep << " " << std::flush;
 
-              int sec = ( sleep * read_usec_ ) / ( 1000*1000 );
-              if ( sec != prev_sec )
-                {
-                  int after = ( sleep_after_ * read_usec_ ) / ( 1000*1000 );
+		int sec = ( sleep * read_usec_ ) / ( 1000*1000 );
+		if ( sec != prev_sec )
+		  {
+		    int after = ( sleep_after_ * read_usec_ ) / ( 1000*1000 );
 
-                  std::stringstream sleep_after;
+		    std::stringstream sleep_after;
 
-                  sleep_after << "I will go to sleep after ";
-                  sleep_after << ( after-sec );
-                  sleep_after <<  " seconds";
+		    sleep_after << "I will go to sleep after ";
+		    sleep_after << ( after-sec );
+		    sleep_after <<  " seconds";
 
-                  disp.log ( sleep_after.str() );
-                  prev_sec = sec;
-                }
-            }
+		    disp.log ( sleep_after.str() );
+		    prev_sec = sec;
+		  }
+	      }
+	  }
         }
       catch ( std::string line )
         {
+	  
+	  if(is_surfing)
+	  {
+	    is_surfing = false;
+	    internet_sentences.clear();
+	    internet_row = 0;
+	  }
 
           if ( sleep_ )
             {
@@ -143,7 +199,10 @@ void Samu::FamilyCaregiverShell ( void )
             }
             else if(std::regex_match(line, std::regex("http.*")))
 	    {
-	      
+	      disp.log( "I am surfing on the internet." );
+	      parseURL(line);
+	      is_surfing = true;
+	      internet_row = 0;
 	    }
           else
             {

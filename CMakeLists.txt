@@ -98,6 +98,13 @@ add_definitions(-DQNN_DEBUG)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -pthread -O3 -lm")
 
+FIND_PACKAGE(CURL)
+IF(CURL_FOUND)
+  INCLUDE_DIRECTORIES(${CURL_INCLUDE_DIR})
+ELSE(CURL_FOUND)
+  MESSAGE(FATAL_ERROR "Could not find the CURL library and development files.")
+ENDIF()
+
 if(${CUDA_LAYERS})
   add_definitions(-DCUDA_PRCPS)
   find_package(CUDA REQUIRED)
@@ -141,6 +148,6 @@ else()
   add_executable(samu nlp.hpp nlp.cpp ql.hpp samu.hpp samu.cpp main.cpp  )
 endif()
 
-target_link_libraries(samu ${LINK_GRAMMAR_LIBRARIES} ${PNGwriter_LIBRARIES} ${Boost_LIBRARIES} ${CURSES_LIBRARIES})
+target_link_libraries(samu ${LINK_GRAMMAR_LIBRARIES} ${PNGwriter_LIBRARIES} ${Boost_LIBRARIES} ${CURSES_LIBRARIES} ${CURL_LIBRARIES})
 
 install(TARGETS samu DESTINATION bin)

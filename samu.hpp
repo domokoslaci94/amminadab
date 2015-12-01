@@ -123,6 +123,8 @@ public:
   }
 
   void FamilyCaregiverShell ( void );
+  void parseURL ( std::string url );
+  void splitText( std::string text );
   void terminal ( void )
   {
     std::unique_lock<std::mutex> lk ( mutex_ );
@@ -736,6 +738,11 @@ private:
   int old_talk_id {-std::numeric_limits<int>::max() };
 
   std::string training_file;
+  
+  // internetezés
+  std::vector<std::string> internet_sentences;
+  bool is_surfing;
+  int internet_row;
 };
 
 #endif
