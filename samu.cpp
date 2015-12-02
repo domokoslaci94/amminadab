@@ -76,11 +76,58 @@ static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *use
 void Samu::splitText(std::string text)
 {
   size_t pos = 0;
-  std::string token;
-  while ((pos = text.find('\n')) != std::string::npos) {
-      token = text.substr(0, pos + 1);
-      internet_sentences.push_back(token);
-      text.erase(0, pos + 1);
+  for(int i=0; i<text.length(); i++){
+  	if(text[i]=='\n' || text[i]=='.' || text[i]=='?' || text[i]=='!'){
+	  if(i == 0 || text[0] == ' ')
+	  {
+	    i = -1;
+	    text.erase(0,1);
+	  }
+	  else
+	  {
+  		internet_sentences.push_back(text.substr(0, i));
+		internet_sentences[internet_sentences.size()-1].append("\n");
+		text.erase(0,i);
+		i=0;
+		while(text[i]=='\n' || text[i]=='.' || text[i]=='?' || text[i]=='!' || text[i]==' ')
+		{
+		  text.erase(0,1);
+		}
+	  }
+  	}
+  }
+}
+
+void Samu::removeTags(std::string text)
+{
+
+  std::vector<std::string> internet_temp;
+
+  size_t pos = 0;
+  size_t pos2 = 0;
+  while ((pos = text.find('<')) != std::string::npos)
+  {
+  
+  	if(pos!=0){
+  		internet_temp.push_back(text.substr(0, pos));
+		if(internet_temp[internet_temp.size()-1][pos-1] != '.' && internet_temp[internet_temp.size()-1][pos-1] != '!' && internet_temp[internet_temp.size()-1][pos-1] != '?' && internet_temp[internet_temp.size()-1][pos-1] != '\n')
+		{
+		  internet_temp[internet_temp.size()-1].append("\n");
+		}
+  		text.erase(0, pos);
+  	}
+  	else if ((pos2 = text.find('>')) != std::string::npos)
+    {
+      text.erase(pos, pos2 + 1 - pos);
+    }
+  }
+  if(text.length() != 0)
+  {
+    internet_temp.push_back(text);
+  }
+
+  for(auto str : internet_temp){
+  	splitText(str);
   }
 }
 
@@ -102,14 +149,12 @@ void Samu::parseURL ( std::string url )
     if(res != CURLE_OK)
     {
       readBuffer = "";
-      std::cerr << "KOPASZ!!!!" << std::endl;
     }
     
     curl_easy_cleanup(curl);
   }
   
-  splitText(readBuffer);
-  
+  removeTags(readBuffer);
 }
 
 void Samu::FamilyCaregiverShell ( void )
@@ -127,16 +172,27 @@ void Samu::FamilyCaregiverShell ( void )
   int prev_sec {0};
   for ( ; run_ ; )
     {
-      
-      if(is_surfing && internet_sentences.size() != 0){
-	    sentence( -1, internet_sentences[internet_row] );
-	    internet_row++;
+
+	if(is_surfing && internet_sentences.size() != 0)
+	{
+	  if(internet_row < internet_sentences.size())
+	  {
+	      sentence( -1, internet_sentences[internet_row] );
+	      internet_row++;
 	  }
-	  else{
-	   is_surfing = false;
-	   internet_sentences.clear();
-	   internet_row = 0;
+	  else
+	  {
+	    is_surfing = false;
+	    internet_sentences.clear();
+	    internet_row = 0;
 	  }
+	}
+	else
+	 {
+	    is_surfing = false;
+	    internet_sentences.clear();
+	    internet_row = 0;
+	 }
 
       try
         {
