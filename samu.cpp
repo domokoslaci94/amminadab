@@ -98,6 +98,13 @@ void Samu::parseURL ( std::string url )
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
     res = curl_easy_perform(curl);
+    
+    if(res != CURLE_OK)
+    {
+      readBuffer = "";
+      std::cerr << "KOPASZ!!!!" << std::endl;
+    }
+    
     curl_easy_cleanup(curl);
   }
   
@@ -121,9 +128,14 @@ void Samu::FamilyCaregiverShell ( void )
   for ( ; run_ ; )
     {
       
-      if(is_surfing){
+      if(is_surfing && internet_sentences.size() != 0){
 	    sentence( -1, internet_sentences[internet_row] );
 	    internet_row++;
+	  }
+	  else{
+	   is_surfing = false;
+	   internet_sentences.clear();
+	   internet_row = 0;
 	  }
 
       try
