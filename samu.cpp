@@ -78,7 +78,7 @@ void Samu::splitText(std::string text)
   size_t pos = 0;
   for(int i=0; i<text.length(); i++){
   	if(text[i]=='\n' || text[i]=='.' || text[i]=='?' || text[i]=='!'){
-	  if(i == 0 || text[0] == ' ')
+	  if(i == 0 || text[0] == ' ' || text[0] == '\t')
 	  {
 	    i = -1;
 	    text.erase(0,1);

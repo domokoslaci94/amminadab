@@ -124,6 +124,7 @@ public:
 
   void FamilyCaregiverShell ( void );
   void parseURL ( std::string url );
+  void removeTags( std::string text );
   void splitText( std::string text );
   void terminal ( void )
   {
@@ -135,7 +136,7 @@ public:
 
   void sentence ( int id, std::string & sentence, std::string & file )
   {
-    if(std::regex_match( sentence, std::regex( " *" )) )
+    if(std::regex_match( sentence, std::regex( " *" )) || std::regex_match( sentence, std::regex( "\t*" )) )
     {
       throw "Empty string.";
     }
@@ -179,7 +180,7 @@ public:
    
   void sentence ( int id, std::string & sentence )
   {
-    if(std::regex_match( sentence, std::regex( " *" )) )
+    if(std::regex_match( sentence, std::regex( " *" )) || std::regex_match( sentence, std::regex( "\t*" )) )
     {
       throw "Empty string.";
     }
