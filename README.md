@@ -7,9 +7,9 @@
 2. Csomagold ki a letöltött .tar.gz fájlt
 3. Lépj be a kicsomagolt mappába
 4. Telepítés
-	..* ./configure
-	..* make
-	..* sudo make install
+⋅⋅* ./configure
+⋅⋅* make
+⋅⋅* sudo make install
 
 # amminadab
 "The son of Ram is Amminadab." Amminadab uses the Liv-Zempel-Welch tree to narrow the scope of selecting Q-actions.
