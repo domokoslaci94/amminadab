@@ -133,7 +133,7 @@ public:
     werase ( shell_w );
     box ( shell_w, 0, 0 );
     mvwprintw ( shell_w, 0, 1, " Caregiver shell " );
-    mvwprintw ( shell_w, 1, 1, "Norbi> " );
+    mvwprintw ( shell_w, 1, 1, "Input> " );
     waddstr ( shell_w, msg.c_str() );
     wrefresh ( shell_w );
     ncurses_mutex.unlock();
