@@ -1,6 +1,16 @@
 # Védés
 [Bertalan Ádám Samujának](https://github.com/AdamTakeow/amminadab) forkolásával született meg **"Vécsi-Veres Samu"**, akinek tripletbányászata fejlődöt, hibás működések kerültek kijavításra (üres sor, csak szóközt vagy csak tabulátort tartalmazó sorra összeomlott a program), illetve projektünk fő újítása az, hogy Samu már képes az internetről is tanulni.
 
+## cURL könyvtár
+
+1. Letöltés: [http://curl.haxx.se/download.html](http://curl.haxx.se/download.html)
+2. Csomagold ki a letöltött .tar.gz fájlt
+3. Lépj be a kicsomagolt mappába
+4. Telepítés
+	./configure
+	make
+	sudo make install
+
 # amminadab
 "The son of Ram is Amminadab." Amminadab uses the Liv-Zempel-Welch tree to narrow the scope of selecting Q-actions.
 See also the page [Family Robotics - Deep Q-learning with Samu](http://shrek.unideb.hu/~nbatfai/)
